@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net7.0;net472</TargetFrameworks>
+
+    <Description>Library for generating assemblies and metadata for calling Il2Cpp functions from .NET</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AsmResolver.DotNet" Version="5.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Il2CppInterop.Common\Il2CppInterop.Common.csproj" />
+  </ItemGroup>
+</Project>

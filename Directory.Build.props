@@ -1,0 +1,38 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <DebugType>embedded</DebugType>
+
+    <VersionPrefix>2.0.0</VersionPrefix>
+    <VersionSuffix>dev</VersionSuffix>
+
+    <Authors>BepInEx</Authors>
+    <PackageIcon>logo_icon.png</PackageIcon>
+    <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <OutputPath>../bin/$(MSBuildProjectName)</OutputPath>
+    <PackageOutputPath>../bin/NuGet</PackageOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup Condition="$(TargetFramework) == 'net472' or $(TargetFramework) == 'netstandard2.0'">
+    <PackageReference Include="PolySharp" Version="1.13.2" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)\logo\logo_icon.png" Pack="true" Visible="false" PackagePath="" />
+    <None Include="$(MSBuildThisFileDirectory)\README.md" Pack="true" Visible="false" PackagePath="" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- TODO: Remove once all public methods have been documented or hidden.  -->
+    <NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
+</Project>
