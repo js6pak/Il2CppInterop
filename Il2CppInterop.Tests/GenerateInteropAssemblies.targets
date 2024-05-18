@@ -1,0 +1,44 @@
+<Project>
+  <PropertyGroup>
+    <Il2CppInteropInput Condition="'$(Il2CppInteropInput)' == ''">$(GamePath)/cpp2il_out</Il2CppInteropInput>
+    <Il2CppInteropOutput Condition="'$(Il2CppInteropOutput)' == ''">$(BaseIntermediateOutputPath)/interop</Il2CppInteropOutput>
+    <Il2CppInteropMethodBodyType Condition="'$(Il2CppInteropMethodBodyType)' == ''">RuntimeInvoke</Il2CppInteropMethodBodyType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Il2CppInterop.CLI\Il2CppInterop.CLI.csproj" ReferenceOutputAssembly="false" OutputItemType="Il2CppInteropCli" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <_GenerateInteropAssembliesInputs Include="$(Il2CppInteropInput)/*.dll" />
+    <_GenerateInteropAssembliesOutputs Include="$(Il2CppInteropOutput)/Il2Cpp.mscorlib.dll" />
+    <_GenerateInteropAssembliesOutputs Include="$(Il2CppInteropOutput)/*.dll" />
+  </ItemGroup>
+
+  <Target Name="CreateGenerateInteropAssembliesCacheFile"
+          DependsOnTargets="GetAssemblyAttributes">
+    <PropertyGroup>
+      <_GenerateInteropAssembliesCacheFile>$(BaseIntermediateOutputPath)/$(MSBuildProjectName).InteropAssembliesInputs.cache</_GenerateInteropAssembliesCacheFile>
+    </PropertyGroup>
+
+    <Hash ItemsToHash="$(Il2CppInteropMethodBodyType)">
+      <Output TaskParameter="HashResult" PropertyName="_Hash" />
+    </Hash>
+
+    <WriteLinesToFile Lines="$(_Hash)" File="$(_GenerateInteropAssembliesCacheFile)" Overwrite="True" WriteOnlyWhenDifferent="True" />
+
+    <ItemGroup>
+      <FileWrites Include="$(_GenerateInteropAssembliesCacheFile)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="GenerateInteropAssemblies" AfterTargets="ResolveProjectReferences" DependsOnTargets="CreateGenerateInteropAssembliesCacheFile"
+          Inputs="@(Il2CppInteropCli);@(_GenerateInteropAssembliesInputs);$(_GenerateInteropAssembliesCacheFile)"
+          Outputs="@(_GenerateInteropAssembliesOutputs)">
+    <Exec Command="dotnet @(Il2CppInteropCli) generate --input $(Il2CppInteropInput) --output $(Il2CppInteropOutput) --interop-method-body-type $(Il2CppInteropMethodBodyType)" />
+
+    <ItemGroup>
+      <Reference Include="$(Il2CppInteropOutput)/*.dll" />
+    </ItemGroup>
+  </Target>
+</Project>

@@ -1,8 +1,9 @@
 using Il2CppInterop.Bindings.Structs;
+using Il2CppInterop.Runtime.InteropTypes.Stores;
 
 namespace Il2CppInterop.Runtime.InteropTypes.Arrays;
 
-public unsafe class Il2CppReferenceArray<T> : Il2CppArrayBase<T> where T : Il2CppObjectBase
+public unsafe class Il2CppReferenceArray<T> : Il2CppArrayBase<T?> where T : Il2CppObjectBase
 {
     static Il2CppReferenceArray()
     {
@@ -21,9 +22,9 @@ public unsafe class Il2CppReferenceArray<T> : Il2CppArrayBase<T> where T : Il2Cp
     {
     }
 
-    protected new Il2CppObject** StartPointer => (Il2CppObject**)base.StartPointer;
+    public new Il2CppObject** StartPointer => (Il2CppObject**)base.StartPointer;
 
-    public override T this[int index]
+    public override T? this[int index]
     {
         get
         {
@@ -33,7 +34,7 @@ public unsafe class Il2CppReferenceArray<T> : Il2CppArrayBase<T> where T : Il2Cp
         set
         {
             EnsureIndexIsInBounds(index);
-            StartPointer[index] = value.Pointer;
+            StartPointer[index] = value != null ? value.Pointer : null;
         }
     }
 }

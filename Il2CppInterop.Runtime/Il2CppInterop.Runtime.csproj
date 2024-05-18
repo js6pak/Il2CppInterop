@@ -4,17 +4,22 @@
 
     <Description>Runtime tools for bridging .NET and Il2Cpp together</Description>
   </PropertyGroup>
-  
+
   <ItemGroup>
+    <InternalsVisibleTo Include="Il2CppInterop.Tests" />
     <InternalsVisibleTo Include="Il2CppInterop.HarmonySupport" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="ELFSharp" Version="2.17.2" />
     <PackageReference Include="Iced" Version="1.19.0" />
+
+    <PackageReference Include="Echo.ControlFlow" Version="0.9.0.1" />
+    <PackageReference Include="Echo.Platforms.Iced" Version="0.9.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Il2CppInterop.Common\Il2CppInterop.Common.csproj" />
-    <PackageReference Include="Il2CppInterop.Bindings" Version="0.1.0" />
+    <PackageReference Include="Il2CppInterop.Bindings" Version="$(Il2CppInteropBindingsVersion)" />
   </ItemGroup>
 </Project>

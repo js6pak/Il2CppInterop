@@ -1,29 +1,33 @@
-using Il2CppInterop.Generator.Interop;
+using Il2CppInterop.Generator.Contexts.Interop;
+using Il2CppInterop.Generator.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Il2CppInterop.Generator;
 
-public static class InteropAssemblyGenerator
+public sealed class InteropAssemblyGenerator
 {
-    public static void Run(GeneratorOptions options)
+    public static void Run(GeneratorOptions options, ILoggerFactory? loggerFactory = null)
     {
-        var generationContext = new InteropGenerationContext(options.Input);
+        loggerFactory ??= NullLoggerFactory.Instance;
+        var logger = loggerFactory.CreateLogger<InteropAssemblyGenerator>();
 
-        // Pass 0: create all type definitions so they can be referenced later
-        generationContext.CreateAssembliesAndEmptyTypeDefinitions();
-
-        // Pass 1: setup type definitions (base type, interfaces, generics)
-        foreach (var typeContext in generationContext.TopLevelTypes)
+        var stopwatch = ValueStopwatch.StartNew();
         {
-            typeContext.Setup();
-        }
+            var generationContext = new InteropGenerationContext(options.Input, options.InteropMethodBodyType, loggerFactory);
 
-        // Pass 2: fill type definitions (methods, fields, static constructor)
-        foreach (var typeContext in generationContext.TopLevelTypes)
-        {
-            typeContext.Fill();
-        }
+            // Pass 0: create all type definitions so they can be referenced later
+            generationContext.CreateAssembliesAndEmptyTypeDefinitions();
 
-        Directory.CreateDirectory(options.OutputPath);
-        generationContext.Save(options.OutputPath);
+            // Pass 1: setup type definitions (base type, interfaces, generics)
+            generationContext.Setup();
+
+            // Pass 2: fill type definitions (methods, fields, static constructor)
+            generationContext.Fill();
+
+            Directory.CreateDirectory(options.OutputPath);
+            generationContext.Save(options.OutputPath);
+        }
+        logger.LogInformation("Done in {ElapsedTime}", stopwatch.GetElapsedTime().ToPrettyString());
     }
 }

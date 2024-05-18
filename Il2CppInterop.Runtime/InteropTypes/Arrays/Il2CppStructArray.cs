@@ -1,4 +1,5 @@
 using Il2CppInterop.Bindings.Structs;
+using Il2CppInterop.Runtime.InteropTypes.Stores;
 
 namespace Il2CppInterop.Runtime.InteropTypes.Arrays;
 
@@ -17,11 +18,18 @@ public unsafe class Il2CppStructArray<T> : Il2CppArrayBase<T> where T : unmanage
     {
     }
 
-    public Il2CppStructArray(T[] array) : base(array)
+    public Il2CppStructArray(ReadOnlySpan<T> span) : base(span.Length)
+    {
+        span.CopyTo(Span);
+    }
+
+    public Il2CppStructArray(T[] array) : this(new ReadOnlySpan<T>(array))
     {
     }
 
-    protected new T* StartPointer => (T*)base.StartPointer;
+    public new T* StartPointer => (T*)base.StartPointer;
+
+    public Span<T> Span => new(StartPointer, Length);
 
     public override T this[int index]
     {

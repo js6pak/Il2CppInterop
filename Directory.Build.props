@@ -17,9 +17,8 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <OutputPath>../bin/$(MSBuildProjectName)</OutputPath>
-    <PackageOutputPath>../bin/NuGet</PackageOutputPath>
+  <PropertyGroup>
+    <Il2CppInteropBindingsVersion>0.1.0</Il2CppInteropBindingsVersion>
   </PropertyGroup>
 
   <ItemGroup Condition="$(TargetFramework) == 'net472' or $(TargetFramework) == 'netstandard2.0'">

@@ -1,26 +1,59 @@
+using AsmResolver;
 using AsmResolver.DotNet;
+using AsmResolver.DotNet.Code.Cil;
 using AsmResolver.DotNet.Signatures;
+using AsmResolver.DotNet.Signatures.Types;
+using AsmResolver.PE.DotNet.Cil;
 using AsmResolver.PE.DotNet.Metadata.Tables.Rows;
 
 namespace Il2CppInterop.Generator.Extensions;
 
 internal static class AsmResolverExtensions
 {
+    public static AssemblyReference CreateAssemblyReference(this ModuleDefinition module, Utf8String? name, Version version)
+    {
+        var assemblyReference = new AssemblyReference(name, version);
+        module.AssemblyReferences.Add(assemblyReference);
+        return assemblyReference;
+    }
+
     public static TypeReference CreateTypeReference(this IResolutionScope scope, ModuleDefinition? module, string? ns, string name)
     {
         return new TypeReference(module, scope, ns, name);
     }
 
-    public static MethodDefinition CreateStaticConstructor(ModuleDefinition module)
+    public static PointerTypeSignature MakePointerType(this ITypeDefOrRef type, bool isValueType)
     {
-        return new MethodDefinition(
-            ".cctor",
-            MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.SpecialName | MethodAttributes.RuntimeSpecialName | MethodAttributes.Static,
-            MethodSignature.CreateStatic(module.CorLibTypeFactory.Void)
-        );
+        return new PointerTypeSignature(type.ToTypeSignature(isValueType));
     }
 
-    public static bool IsBlittable(this ElementType elementType)
+    public static bool IsStaticConstructor(this MethodDefinition method)
+    {
+        return method.IsSpecialName && method.IsRuntimeSpecialName && method.Name.Equals(".cctor"u8);
+    }
+
+    private static readonly Utf8String _implicitConversionName = "op_Implicit"u8.ToUtf8String();
+
+    public static MethodDefinition CreateImplicitConversion(TypeSignature intoType, TypeSignature fromType)
+    {
+        var method = new MethodDefinition(
+            _implicitConversionName,
+            MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.Static | MethodAttributes.SpecialName,
+            MethodSignature.CreateStatic(intoType, fromType)
+        );
+
+        method.Parameters.Single().GetOrCreateDefinition().Name = "value";
+
+        return method;
+    }
+
+    public static void AddEmptyBody(this MethodDefinition method)
+    {
+        method.CilMethodBody = new CilMethodBody(method);
+        method.CilMethodBody.Instructions.Add(new CilInstruction(0, CilOpCodes.Ret));
+    }
+
+    public static bool IsPrimitive(this ElementType elementType)
     {
         switch (elementType)
         {
@@ -36,5 +69,17 @@ internal static class AsmResolverExtensions
             default:
                 return false;
         }
+    }
+
+    public static bool IsPointerLike(this ITypeDescriptor typeSignature)
+    {
+        if (typeSignature is TypeSpecification typeSpecification) return typeSpecification.Signature!.IsPointerLike();
+        return typeSignature is PointerTypeSignature or ByReferenceTypeSignature;
+    }
+
+    public static bool IsValueTypeLike(this ITypeDescriptor typeSignature)
+    {
+        if (typeSignature is TypeSpecification typeSpecification) return typeSpecification.Signature!.IsValueTypeLike();
+        return typeSignature.IsValueType || typeSignature.IsPointerLike();
     }
 }

@@ -6,18 +6,19 @@ public static class NamePrefix
 {
     public static string[] Whitelist { get; } =
     {
-        "UnityEngine.", "Unity.", "Il2Cpp.",
+        "UnityEngine", "Unity", "Il2Cpp",
     };
 
     public static bool IsWhitelisted([NotNullWhen(true)] string? value)
     {
         if (string.IsNullOrEmpty(value)) return false;
 
-        if (value == "Il2Cpp") return true;
-
         foreach (var whitelist in Whitelist)
         {
-            if (value.StartsWith(whitelist)) return true;
+            if (value == whitelist || value.StartsWith(whitelist + "."))
+            {
+                return true;
+            }
         }
 
         return false;

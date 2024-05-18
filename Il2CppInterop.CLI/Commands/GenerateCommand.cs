@@ -1,35 +1,38 @@
 using System.CommandLine;
-using System.CommandLine.NamingConventionBinder;
-using System.Diagnostics.CodeAnalysis;
 using Il2CppInterop.Generator;
 
 namespace Il2CppInterop.CLI.Commands;
 
-internal sealed class GenerateCommand : Command
+internal sealed class GenerateCommand : CliCommand
 {
-    public GenerateCommand() : base("generate", "Generate wrapper assemblies that can be used to interop with Il2Cpp")
+    public CliOption<DirectoryInfo> Input { get; } = new CliOption<DirectoryInfo>("--input") { Description = "Directory with dummy assemblies", Required = true }.AcceptExistingOnly();
+    public CliOption<DirectoryInfo> Output { get; } = new CliOption<DirectoryInfo>("--output") { Description = "Directory to write generated assemblies to", Required = true };
+    public CliOption<DirectoryInfo> Unity { get; } = new CliOption<DirectoryInfo>("--unity") { Description = "Directory with dummy assemblies" }.AcceptExistingOnly();
+
+    public CliOption<InteropMethodBodyType> InteropMethodBodyType { get; } = new("--interop-method-body-type");
+
+    public GenerateCommand(Il2CppInteropRootCommand rootCommand) : base("generate", "Generate wrapper assemblies that can be used to interop with Il2Cpp")
     {
-        Add(new Option<DirectoryInfo>("--input", "Directory with dummy assemblies") { IsRequired = true }.ExistingOnly());
-        Add(new Option<DirectoryInfo>("--output", "Directory to write generated assemblies to") { IsRequired = true });
-        Add(new Option<DirectoryInfo>("--unity", "Directory with original Unity assemblies for unstripping").ExistingOnly());
+        Options.Add(Input);
+        Options.Add(Output);
+        Options.Add(Unity);
 
-        Handler = CommandHandler.Create(Handle);
+        Options.Add(InteropMethodBodyType);
+
+        SetAction(result =>
+        {
+            var input = result.GetValue(Input)!;
+            var output = result.GetValue(Output)!;
+            var unity = result.GetValue(Unity)!;
+
+            var inputContext = InputContext.LoadFromDirectory(input.FullName);
+            if (!inputContext.Assemblies.Any())
+                throw new InvalidOperationException("No input assemblies found");
+
+            InteropAssemblyGenerator.Run(new GeneratorOptions(inputContext, output.FullName)
+            {
+                InteropMethodBodyType = result.GetValue(InteropMethodBodyType),
+            }, rootCommand.GetLoggerFactory(result));
+        });
     }
-
-    public static void Handle(GenerateCommandOptions options)
-    {
-        var inputContext = InputContext.LoadFromDirectory(options.Input.FullName);
-        if (inputContext.Assemblies.Count <= 0)
-            throw new InvalidOperationException("No input assemblies found");
-
-        InteropAssemblyGenerator.Run(new GeneratorOptions(inputContext, options.Output.FullName));
-    }
-
-    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)]
-    public record GenerateCommandOptions(
-        bool Verbose,
-        DirectoryInfo Input,
-        DirectoryInfo Output,
-        DirectoryInfo Unity
-    ) : BaseCommandOptions(Verbose);
 }

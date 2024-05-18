@@ -1,14 +1,16 @@
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using Il2CppInterop.Bindings.Structs;
+using Il2CppInterop.Runtime.InteropTypes.Stores;
 
 namespace Il2CppInterop.Runtime.InteropTypes.Arrays;
 
-public abstract unsafe class Il2CppArrayBase<T> : Il2CppObjectBase, IList<T>
+public abstract unsafe class Il2CppArrayBase<T> : Il2CppObjectBase, IList<T>, IReadOnlyList<T>
 {
     static Il2CppArrayBase()
     {
         var elementClassPointer = Il2CppClassPointerStore<T>.Pointer;
-        if (elementClassPointer == default) throw new ArgumentException($"{nameof(Il2CppArrayBase<T>)} requires an Il2Cpp reference type, which {typeof(T)} isn't");
+        if (elementClassPointer == null) throw new ArgumentException($"{nameof(Il2CppArrayBase<T>)}'s element type has to be an il2cpp type, which {typeof(T)} isn't");
         Il2CppClassPointerStore<Il2CppArrayBase<T>>.Pointer = Il2CppArray.GetClass(elementClassPointer, 1);
     }
 
@@ -16,9 +18,7 @@ public abstract unsafe class Il2CppArrayBase<T> : Il2CppObjectBase, IList<T>
     {
         if (size < 0) throw new ArgumentOutOfRangeException(nameof(size), "Array size must not be negative");
 
-        var classPointer = Il2CppClassPointerStore<T>.Pointer;
-        if (classPointer == default) throw new ArgumentException($"{nameof(Il2CppArrayBase<T>)} requires an Il2Cpp reference type, which {typeof(T)} isn't");
-        return Il2CppArray.New(classPointer, size);
+        return Il2CppArray.New(Il2CppClassPointerStore<T>.Pointer, size);
     }
 
     protected Il2CppArrayBase(Il2CppArray* pointer) : base((Il2CppObject*)pointer)
@@ -29,7 +29,7 @@ public abstract unsafe class Il2CppArrayBase<T> : Il2CppObjectBase, IList<T>
     {
     }
 
-    protected Il2CppArrayBase(T[] array) : this(AllocateArray(array.Length))
+    protected Il2CppArrayBase(T[] array) : this(array.Length)
     {
         for (var i = 0; i < array.Length; i++)
         {
@@ -38,9 +38,10 @@ public abstract unsafe class Il2CppArrayBase<T> : Il2CppObjectBase, IList<T>
     }
 
     public new Il2CppArray* Pointer => (Il2CppArray*)base.Pointer;
-    protected void* StartPointer => (byte*)Pointer + Il2CppArray.Size;
+    public void* StartPointer => (byte*)Pointer + Il2CppArray.Size;
     public int Length => Pointer->Length;
 
+    int IReadOnlyCollection<T>.Count => Length;
     int ICollection<T>.Count => Length;
     bool ICollection<T>.IsReadOnly => true;
 
@@ -51,7 +52,7 @@ public abstract unsafe class Il2CppArrayBase<T> : Il2CppObjectBase, IList<T>
         if (index < 0 || index >= Length) throw new IndexOutOfRangeException("Index was outside the bounds of the array.");
     }
 
-    public int IndexOf(T item)
+    public virtual int IndexOf(T item)
     {
         for (var i = 0; i < Length; i++)
         {
@@ -81,12 +82,37 @@ public abstract unsafe class Il2CppArrayBase<T> : Il2CppObjectBase, IList<T>
         }
     }
 
-    private static NotSupportedException FixedSizeCollectionException() => new("Collection was of a fixed size.");
-    public void Clear() => throw FixedSizeCollectionException();
-    public void Add(T item) => throw FixedSizeCollectionException();
-    public void Insert(int index, T item) => throw FixedSizeCollectionException();
-    public bool Remove(T item) => throw FixedSizeCollectionException();
-    public void RemoveAt(int index) => throw FixedSizeCollectionException();
+    [DoesNotReturn]
+    private static void ThrowFixedSizeCollectionException()
+    {
+        throw new NotSupportedException("Collection was of a fixed size.");
+    }
+
+    public void Clear()
+    {
+        ThrowFixedSizeCollectionException();
+    }
+
+    public void Add(T item)
+    {
+        ThrowFixedSizeCollectionException();
+    }
+
+    public void Insert(int index, T item)
+    {
+        ThrowFixedSizeCollectionException();
+    }
+
+    public bool Remove(T item)
+    {
+        ThrowFixedSizeCollectionException();
+        return default;
+    }
+
+    public void RemoveAt(int index)
+    {
+        ThrowFixedSizeCollectionException();
+    }
 
     public IEnumerator<T> GetEnumerator() => new Il2CppArrayEnumerator<T>(this);
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

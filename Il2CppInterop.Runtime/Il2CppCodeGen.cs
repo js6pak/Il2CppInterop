@@ -1,3 +1,6 @@
+using Il2CppInterop.Runtime.InteropTypes;
+using Il2CppInterop.Runtime.InteropTypes.Stores;
+
 namespace Il2CppInterop.Runtime;
 
 /// <summary>

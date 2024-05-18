@@ -1,5 +1,6 @@
 ﻿using AssetRipper.VersionUtilities;
 using Il2CppInterop.Bindings;
+using Il2CppInterop.Runtime.Hooks;
 using Il2CppInterop.Runtime.Injection;
 
 namespace Il2CppInterop.Runtime;
@@ -24,6 +25,8 @@ public sealed class Il2CppInteropRuntime
     public UnityVersion UnityVersion { get; }
 
     public IDetourProvider DetourProvider { get; }
+
+    internal GameAssemblyModule GameAssemblyModule { get; } = new();
 
     public static void Initialize(RuntimeConfiguration configuration)
     {

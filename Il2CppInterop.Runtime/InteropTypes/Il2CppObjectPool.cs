@@ -1,47 +1,52 @@
+using System.Collections.Concurrent;
 using System.Runtime.Serialization;
 using Il2CppInterop.Bindings.Structs;
 using Il2CppInterop.Bindings.Utilities;
+using Il2CppInterop.Runtime.InteropTypes.Stores;
 
 namespace Il2CppInterop.Runtime.InteropTypes;
 
 public static unsafe class Il2CppObjectPool
 {
-    /// Il2CppObjects that are alive on il2cpp side but not necessarily on C# side (although resurrection should ensure that aswell)
-    private static readonly Dictionary<Handle<Il2CppObject>, WeakReference<Il2CppObjectBase>> _alivePool = new();
-
-    /// Cursed workaround for being able to free il2cpp gc handles and pooling at the same time
-    private static readonly Dictionary<Handle<Il2CppObject>, Il2CppObjectBase> _resurrect = new();
-
-    /// Il2CppObjects that are dead on il2cpp side and can be reused
-    private static readonly Dictionary<Type, Stack<Il2CppObjectBase>> _deadPoolMap = new();
+    private static readonly ConcurrentDictionary<Pointer<Il2CppObject>, WeakReference<Il2CppObjectBase>> _cache = new();
+    private static readonly ConcurrentDictionary<Type, ConcurrentBag<Il2CppObjectBase>> _pools = new();
 
     public static Il2CppObjectBase Get(Il2CppObject* pointer)
     {
-        if (_resurrect.Remove(pointer, out var resurrected))
-        {
-            return resurrected;
-        }
+        if (pointer == null) throw new ArgumentNullException(nameof(pointer));
 
-        if (_alivePool.TryGetValue(pointer, out var weakReference))
+        if (OptionalFeatures.Il2CppObjectCaching.IsEnabled && _cache.TryGetValue(pointer, out var reference))
         {
-            if (weakReference.TryGetTarget(out var alive))
+            if (reference.TryGetTarget(out var cachedObject))
             {
-                return alive;
+                return cachedObject;
             }
 
-            _alivePool.Remove(pointer);
+            _cache.TryRemove(pointer, out _);
         }
 
-        var type = Il2CppClassPointerStore.Get(pointer->Class);
+        var type = InteropTypeStore.Get(pointer->Class)
+                   ?? throw new Exception("Couldn't find interop type for " + pointer->Class->AssemblyQualifiedName);
 
-        if (!_deadPoolMap.TryGetValue(type, out var deadPool) || !deadPool.TryPop(out var @object))
+        Il2CppObjectBase il2CppObject;
+
+        if (OptionalFeatures.Il2CppObjectPooling.IsEnabled && _pools.TryGetValue(type, out var pool) && pool.TryTake(out var resurrectedObject))
         {
-            @object = (Il2CppObjectBase)FormatterServices.GetUninitializedObject(type);
+            il2CppObject = resurrectedObject;
+        }
+        else
+        {
+            il2CppObject = (Il2CppObjectBase)FormatterServices.GetUninitializedObject(type);
         }
 
-        @object.Pointer = pointer;
+        il2CppObject.Pointer = pointer;
 
-        return @object;
+        if (OptionalFeatures.Il2CppObjectCaching.IsEnabled && !_cache.TryAdd(pointer, new WeakReference<Il2CppObjectBase>(il2CppObject, true)))
+        {
+            throw new InvalidOperationException($"Failed to add {il2CppObject} (0x{(IntPtr)pointer:X}) to cache");
+        }
+
+        return il2CppObject;
     }
 
     public static T Get<T>(Il2CppObject* pointer) where T : Il2CppObjectBase
@@ -49,31 +54,18 @@ public static unsafe class Il2CppObjectPool
         return (T)Get(pointer);
     }
 
-    internal static void Add(Il2CppObjectBase @object)
+    internal static void Return(Il2CppObjectBase il2CppObject)
     {
-        _alivePool.Add(@object.Pointer, new WeakReference<Il2CppObjectBase>(@object, true));
-    }
-
-    internal static void Resurrect(Il2CppObjectBase @object)
-    {
-        _resurrect.Add(@object.Pointer, @object);
+        var pool = _pools.GetOrAdd(il2CppObject.GetType(), static _ => new ConcurrentBag<Il2CppObjectBase>());
+        pool.Add(il2CppObject);
     }
 
     // TODO hook GarbageCollector::RunFinalizer and call this
     internal static void Remove(Il2CppObject* pointer)
     {
-        _resurrect.Remove(pointer);
-
-        if (_alivePool.Remove(pointer, out var weakReference) && weakReference.TryGetTarget(out var @object))
+        if (!_cache.TryRemove(pointer, out _))
         {
-            var type = @object.GetType();
-
-            if (!_deadPoolMap.TryGetValue(type, out var deadPool))
-            {
-                _deadPoolMap.Add(type, deadPool = new Stack<Il2CppObjectBase>());
-            }
-
-            deadPool.Push(@object);
+            throw new InvalidOperationException($"Failed to remove 0x{(IntPtr)pointer:X} from cache");
         }
     }
 }

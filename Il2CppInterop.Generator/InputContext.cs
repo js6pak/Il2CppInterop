@@ -4,9 +4,9 @@ namespace Il2CppInterop.Generator;
 
 public sealed class InputContext
 {
-    public IReadOnlyCollection<AssemblyDefinition> Assemblies { get; }
+    public IEnumerable<AssemblyDefinition> Assemblies { get; }
 
-    public InputContext(IReadOnlyCollection<AssemblyDefinition> assemblies)
+    public InputContext(IEnumerable<AssemblyDefinition> assemblies)
     {
         Assemblies = assemblies;
     }

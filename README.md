@@ -51,4 +51,4 @@ Bundled into output files:
 
 Used by generator itself:
 
-* [Mono.Cecil](https://github.com/jbevain/cecil) by jbevain, the main tool to produce assemblies
+* [AsmResolver](https://github.com/Washi1337/AsmResolver) by Washi, the main tool to produce assemblies

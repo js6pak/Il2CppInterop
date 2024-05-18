@@ -13,7 +13,15 @@ internal static class CustomAttributeExtensions
     private static string? GetNamedAttribute(CustomAttribute customAttribute, string argumentName)
     {
         var argument = customAttribute.Signature!.NamedArguments.SingleOrDefault(x => x.MemberName == argumentName);
-        return (Utf8String?)argument?.Argument.Element;
+        if (argument == null) return null;
+
+        return argument.Argument.Element switch
+        {
+            string value => value,
+            Utf8String value => value,
+            null => null,
+            _ => throw new InvalidOperationException(),
+        };
     }
 
     private static string? Extract(IHasCustomAttribute hasCustomAttribute, string attributeName, string argumentName)

@@ -1,7 +1,9 @@
 using Il2CppInterop.Bindings;
 using Il2CppInterop.Bindings.Structs;
 using Il2CppInterop.Bindings.Utilities;
+using Il2CppInterop.Runtime.InteropTypes;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
+using Il2CppInterop.Runtime.InteropTypes.Stores;
 
 namespace Il2CppInterop.Runtime;
 
@@ -12,12 +14,16 @@ public static unsafe class LightReflection
 
     static LightReflection()
     {
-        var klass = Il2CppRuntime.GetClassFromName("mscorlib.dll", "System", "Type");
-        _makeGenericTypeMethodPointer = klass->GetMethods().Single(x => x.Value->Name == "MakeGenericType").Value;
-        _makeGenericMethodMethodPointer = klass->GetMethods().Single(x => x.Value->Name == "MakeGenericMethod").Value;
+        var type = Il2CppRuntime.GetClassFromName("mscorlib.dll", "System", "Type");
+        Il2CppClassPointerStore<Il2CppReflectionType>.Pointer = type;
+        _makeGenericTypeMethodPointer = type->GetMethodByNameOrThrow("MakeGenericType");
+
+        var methodInfo = Il2CppRuntime.GetClassFromName("mscorlib.dll", "System.Reflection", "MethodInfo");
+        Il2CppClassPointerStore<Il2CppReflectionMethod>.Pointer = methodInfo;
+        _makeGenericMethodMethodPointer = methodInfo->GetMethodByNameOrThrow("MakeGenericMethod");
     }
 
-    public static Il2CppReflectionType* MakeGenericType(Il2CppReflectionType* type, Il2CppStructArray<Handle<Il2CppReflectionType>> typeArguments)
+    public static Il2CppReflectionType* MakeGenericType(Il2CppReflectionType* type, Il2CppStructArray<Pointer<Il2CppReflectionType>> typeArguments)
     {
         var virtualMethod = type->Object.GetVirtualMethod(_makeGenericTypeMethodPointer);
         var methodPointer = (delegate* unmanaged<Il2CppReflectionType*, Il2CppArray*, Il2CppMethod*, Il2CppReflectionType*>)virtualMethod->MethodPointer;
@@ -26,7 +32,7 @@ public static unsafe class LightReflection
 
     public static Il2CppReflectionType* MakeGenericType(Il2CppReflectionType* type, params Il2CppReflectionType*[] typeArguments)
     {
-        var array = new Il2CppStructArray<Handle<Il2CppReflectionType>>(typeArguments.Length);
+        var array = new Il2CppStructArray<Pointer<Il2CppReflectionType>>(typeArguments.Length);
         for (var i = 0; i < typeArguments.Length; i++)
         {
             array[i] = typeArguments[i];
@@ -46,7 +52,7 @@ public static unsafe class LightReflection
         return Il2CppClass.FromReflectionType(MakeGenericType(Il2CppReflectionType.From(type), typeArguments));
     }
 
-    public static Il2CppReflectionMethod* MakeGenericMethod(Il2CppReflectionMethod* method, Il2CppStructArray<Handle<Il2CppReflectionType>> typeArguments)
+    public static Il2CppReflectionMethod* MakeGenericMethod(Il2CppReflectionMethod* method, Il2CppStructArray<Pointer<Il2CppReflectionType>> typeArguments)
     {
         var virtualMethod = method->Object.GetVirtualMethod(_makeGenericMethodMethodPointer);
         var methodPointer = (delegate* unmanaged<Il2CppReflectionMethod*, Il2CppArray*, Il2CppMethod*, Il2CppReflectionMethod*>)virtualMethod->MethodPointer;
@@ -55,7 +61,7 @@ public static unsafe class LightReflection
 
     public static Il2CppReflectionMethod* MakeGenericMethod(Il2CppReflectionMethod* method, params Il2CppReflectionType*[] typeArguments)
     {
-        var array = new Il2CppStructArray<Handle<Il2CppReflectionType>>(typeArguments.Length);
+        var array = new Il2CppStructArray<Pointer<Il2CppReflectionType>>(typeArguments.Length);
         for (var i = 0; i < typeArguments.Length; i++)
         {
             array[i] = typeArguments[i];

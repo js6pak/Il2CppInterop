@@ -1,12 +1,22 @@
 ﻿using System.CommandLine;
 using Il2CppInterop.CLI.Commands;
+using Serilog;
+using Serilog.Core;
 
-var command = new RootCommand
+var loggingLevelSwitch = new LoggingLevelSwitch();
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Il2CppInterop", loggingLevelSwitch)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateLogger();
+
+try
 {
-    new Option<bool>("--verbose", "Produce more verbose output")
-};
-command.Description = "Generate Managed<->IL2CPP interop assemblies from Cpp2IL's output.";
-
-command.Add(new GenerateCommand());
-
-return command.Invoke(args);
+    var cliConfiguration = new CliConfiguration(new Il2CppInteropRootCommand(loggingLevelSwitch));
+    return await cliConfiguration.InvokeAsync(args);
+}
+finally
+{
+    Log.CloseAndFlush();
+}
