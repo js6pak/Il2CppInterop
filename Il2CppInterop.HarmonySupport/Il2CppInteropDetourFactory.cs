@@ -8,8 +8,10 @@ using MonoMod.Core;
 
 namespace Il2CppInterop.HarmonySupport;
 
-public sealed class Il2CppInteropDetourFactory : IDetourFactory
+public sealed class Il2CppInteropDetourFactory(IDetourFactory? fallback = null) : IDetourFactory
 {
+    private readonly IDetourFactory _fallback = fallback ?? DetourFactory.Current;
+
     public ICoreDetour CreateDetour(CreateDetourRequest request)
     {
         ArgumentNullException.ThrowIfNull(request.Source);
@@ -20,7 +22,7 @@ public sealed class Il2CppInteropDetourFactory : IDetourFactory
             return detour;
         }
 
-        return DetourFactory.Current.CreateDetour(request);
+        return _fallback.CreateDetour(request);
     }
 
     private static bool TryCreateDetour(CreateDetourRequest request, [NotNullWhen(true)] out Il2CppInteropDetour? detour)
@@ -71,6 +73,6 @@ public sealed class Il2CppInteropDetourFactory : IDetourFactory
 
     public ICoreNativeDetour CreateNativeDetour(CreateNativeDetourRequest request)
     {
-        return DetourFactory.Current.CreateNativeDetour(request);
+        return _fallback.CreateNativeDetour(request);
     }
 }

@@ -103,7 +103,7 @@ public static class DelegateSupport
         return builder.ToString();
     }
 
-    private static Delegate GetOrCreateNativeToManagedTrampoline(MethodSignature signature,
+    public static Delegate GetOrCreateNativeToManagedTrampoline(MethodSignature signature,
         Il2CppSystem.Reflection.MethodInfo nativeMethod, MethodInfo managedMethod)
     {
         return NativeToManagedTrampolines.GetOrAdd(managedMethod,
@@ -117,7 +117,6 @@ public static class DelegateSupport
         var returnType = managedMethod.ReturnType.NativeType();
 
         var managedParameters = managedMethod.GetParameters();
-        var nativeParameters = nativeMethod.GetParameters();
         var parameterTypes = new Type[managedParameters.Length + 1 + 1]; // thisptr for target, methodInfo last arg
         parameterTypes[0] = typeof(IntPtr);
         parameterTypes[managedParameters.Length + 1] = typeof(Il2CppMethodInfo*);
@@ -317,7 +316,7 @@ public static class DelegateSupport
         return converted.Cast<TIl2Cpp>();
     }
 
-    internal class MethodSignature : IEquatable<MethodSignature>
+    public class MethodSignature : IEquatable<MethodSignature>
     {
         public readonly bool ConstructedFromNative;
         public readonly bool HasThis;

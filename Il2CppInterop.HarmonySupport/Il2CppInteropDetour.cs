@@ -81,8 +81,20 @@ internal sealed class Il2CppInteropDetour : ICoreDetourWithClone
         SourceMethodCloneIL = CopyOriginal();
         SourceMethodClone = SourceMethodCloneIL.Generate();
 
-        var thunk = GenerateNativeToManagedThunk((MethodInfo)Target).Generate();
-        _thunkDelegate = thunk.CreateDelegate(DelegateTypeFactory.CreateDelegateType(thunk, CallingConvention.Cdecl));
+        // var thunk = GenerateNativeToManagedThunk((MethodInfo)Target).Generate();
+        // _thunkDelegate = thunk.CreateDelegate(DelegateTypeFactory.CreateDelegateType(thunk, CallingConvention.Cdecl));
+
+        try
+        {
+            var thunk = GenerateNativeToManagedThunk(Target).Generate();
+            var thunkDelegateType = DelegateSupport.GetOrCreateDelegateType(new DelegateSupport.MethodSignature((MethodInfo)source, !source.IsStatic), (MethodInfo)source);
+            _thunkDelegate = thunk.CreateDelegate(thunkDelegateType);
+        }
+        catch (Exception e)
+        {
+            Logger.Instance.LogError(e, "guh");
+            throw;
+        }
     }
 
     public void Apply()
@@ -184,7 +196,7 @@ internal sealed class Il2CppInteropDetour : ICoreDetourWithClone
         return methodOrConstructor is ConstructorInfo ? typeof(void) : ((MethodInfo)methodOrConstructor).ReturnType;
     }
 
-    private DynamicMethodDefinition GenerateNativeToManagedThunk(MethodInfo targetManagedMethodInfo)
+    private DynamicMethodDefinition GenerateNativeToManagedThunk(MethodBase targetManagedMethodInfo)
     {
         // managedParams are the interop types used on the managed side
         // unmanagedParams are IntPtr references that are used by IL2CPP compiled assembly
